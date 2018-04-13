@@ -103,8 +103,6 @@ ENV/
 # Visual Studio
 .vs
 
-*.pkl
-
 .idea/
 
 /Cognitive Services/Text Analytics/config.json
