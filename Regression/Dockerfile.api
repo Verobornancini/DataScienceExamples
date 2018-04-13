@@ -1,0 +1,48 @@
+FROM ubuntu:xenial
+
+# Install all OS dependencies for notebook server that starts but lacks all
+# features (e.g., download as all possible file formats)
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update && apt-get -yq dist-upgrade \
+ && apt-get install -yq --no-install-recommends \
+    wget \
+    bzip2 \
+    ca-certificates \
+    sudo \
+    locales \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
+    locale-gen
+
+# Configure environment
+ENV CONDA_DIR=/opt/conda \
+    SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+ENV PATH=$CONDA_DIR/bin:$PATH 
+
+# Install conda
+ENV MINICONDA_VERSION 4.3.27
+RUN cd /tmp && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+    rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+    $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+    $CONDA_DIR/bin/conda config --system --set show_channel_urls true 
+
+### MAGIC HERE
+
+ADD model/conda-api-reqs.txt .
+
+RUN $CONDA_DIR/bin/conda install -c conda-forge --yes --file conda-api-reqs.txt && \
+    conda clean -tipsy
+
+ADD SimpleLinearRegressionAPI.py .
+
+ADD model/linear_regression_model.pkl .
+
+ENTRYPOINT ["python", "SimpleLinearRegressionAPI.py"]
