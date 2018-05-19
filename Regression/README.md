@@ -31,6 +31,6 @@ Step:
 * Test prediction service using notebook
 
         docker build -f Dockerfile.test -t slr-test .
-        docker run -it --rm -v $PWD/test:/home/jovyan/test -e NB_UID=`id -u` slr-test
+        docker run -it --rm -v $PWD/test:/home/jovyan/test -e NB_UID=`id -u` --net=host slr-test
 
 These docker images are available in https://hub.docker.com/r/gmiretti/
