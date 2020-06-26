@@ -1,4 +1,5 @@
-FROM ubuntu:xenial
+# Image based in https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile
+FROM ubuntu:focal
 
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
@@ -23,25 +24,41 @@ ENV CONDA_DIR=/opt/conda \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US.UTF-8
 ENV PATH=$CONDA_DIR/bin:$PATH 
+ARG PYTHON_VERSION=default
 
 # Install conda
-ENV MINICONDA_VERSION 4.3.27
-RUN cd /tmp && \
-    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-    rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
-    $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
-    $CONDA_DIR/bin/conda config --system --set show_channel_urls true 
+ENV MINICONDA_VERSION latest
+ENV MINICONDA_VERSION=4.8.2 \
+    MINICONDA_MD5=87e77f097f6ebb5127c77662dfc3165e \
+    CONDA_VERSION=4.8.2
 
-### MAGIC HERE
+WORKDIR /tmp
+RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "${MINICONDA_MD5} *Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    /bin/bash Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+    rm Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
+    conda config --system --prepend channels conda-forge && \
+    conda config --system --set auto_update_conda false && \
+    conda config --system --set show_channel_urls true && \
+    conda config --system --set channel_priority strict && \
+    if [ ! $PYTHON_VERSION = 'default' ]; then conda install --yes python=$PYTHON_VERSION; fi && \
+    conda list python | grep '^python ' | tr -s ' ' | cut -d '.' -f 1,2 | sed 's/$/.*/' >> $CONDA_DIR/conda-meta/pinned && \
+    conda install --quiet --yes conda && \
+    conda install --quiet --yes pip && \
+    conda update --all --quiet --yes && \
+    conda clean --all -f -y 
 
-ADD model/conda-api-reqs.txt .
+### Built API
 
-RUN $CONDA_DIR/bin/conda install -c conda-forge --yes --file conda-api-reqs.txt && \
+ADD model/conda-model-reqs.txt .
+ADD api/conda-api-reqs.txt .
+RUN cat conda-model-reqs.txt conda-api-reqs.txt > requirements.txt
+
+RUN $CONDA_DIR/bin/conda install --yes --file requirements.txt && \
     conda clean -tipsy
 
-ADD SimpleLinearRegressionAPI.py .
+ADD api/SimpleLinearRegressionAPI.py .
 
 ADD model/linear_regression_model.pkl .
 

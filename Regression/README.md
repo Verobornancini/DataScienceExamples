@@ -15,8 +15,8 @@ The only prerequesite is to have [Docker](http://www.docker.com) installed
 Step:
 
 * Start notebook service to work interactively with data: clean, analize, model and evaluate
-    
-        docker run -it --rm -p 8888:8888 -v $PWD/:/home/jovyan/work -e NB_UID=`id -u` --net=host jupyter/scipy-notebook
+
+        docker run -it --rm -v $PWD/:/home/jovyan/work -e NB_UID=`id -u` --net=host jupyter/scipy-notebook
 
 * Build and persist model and dependencies scripted
 
@@ -32,5 +32,9 @@ Step:
 
         docker build -f Dockerfile.test -t slr-test .
         docker run -it --rm -v $PWD/test:/home/jovyan/test -e NB_UID=`id -u` --net=host slr-test
+
+* Test prediction API using swagger documentation
+
+        wget -O tmp/swagger.json localhost:5000/spec && docker run --net=host -v tmp:/tmp -e SWAGGER_FILE=/tmp/swagger.json swaggerapi/swagger-editor
 
 These docker images are available in https://hub.docker.com/r/gmiretti/
